@@ -5,9 +5,15 @@ import com.disasteralert.dto.AlertResponse;
 import com.disasteralert.entity.Alert;
 import com.disasteralert.entity.AlertType;
 import com.disasteralert.entity.User;
+import com.disasteralert.ml.dto.CredibilityResultDTO;
+import com.disasteralert.ml.service.DecisionTreeEscalationService;
+import com.disasteralert.ml.service.DecisionTreeSeverityService;
+import com.disasteralert.ml.service.NaiveBayesCredibilityService;
 import com.disasteralert.repository.AlertRepository;
 import com.disasteralert.repository.AlertTypeRepository;
 import com.disasteralert.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,16 +28,27 @@ import java.util.stream.Collectors;
 @Service
 public class AlertService {
 
+    private static final Logger log = LoggerFactory.getLogger(AlertService.class);
+
     private final AlertRepository alertRepository;
     private final AlertTypeRepository alertTypeRepository;
     private final UserRepository userRepository;
+    private final NaiveBayesCredibilityService naiveBayesCredibilityService;
+    private final DecisionTreeSeverityService decisionTreeSeverityService;
+    private final DecisionTreeEscalationService decisionTreeEscalationService;
 
     public AlertService(AlertRepository alertRepository,
                        AlertTypeRepository alertTypeRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       NaiveBayesCredibilityService naiveBayesCredibilityService,
+                       DecisionTreeSeverityService decisionTreeSeverityService,
+                       DecisionTreeEscalationService decisionTreeEscalationService) {
         this.alertRepository = alertRepository;
         this.alertTypeRepository = alertTypeRepository;
         this.userRepository = userRepository;
+        this.naiveBayesCredibilityService = naiveBayesCredibilityService;
+        this.decisionTreeSeverityService = decisionTreeSeverityService;
+        this.decisionTreeEscalationService = decisionTreeEscalationService;
     }
 
     @Transactional
@@ -54,6 +71,31 @@ public class AlertService {
         alert.setReliabilityScore(0);
 
         Alert savedAlert = alertRepository.save(alert);
+
+        // Classify credibility using Naive Bayes
+        CredibilityResultDTO credibilityResult = naiveBayesCredibilityService.classify(savedAlert);
+        savedAlert.setCredibilityLabel(credibilityResult.getLabel());
+        savedAlert.setCredibilityConfidence(credibilityResult.getConfidence());
+
+        if ("SPAM".equals(credibilityResult.getLabel())) {
+            log.warn("Alert {} flagged as SPAM for admin review", savedAlert.getId());
+        }
+
+        // Predict severity using Decision Tree
+        int predictedSeverity = decisionTreeSeverityService.predictSeverity(
+                alertType.getName(), request.getDescription(),
+                request.getLatitude(), request.getLongitude());
+        savedAlert.setPredictedSeverity(predictedSeverity);
+
+        // Check escalation
+        boolean escalate = decisionTreeEscalationService.shouldEscalate(
+                alertType.getName(), request.getDescription(),
+                request.getLatitude(), request.getLongitude(), predictedSeverity);
+        if (escalate) {
+            log.warn("Alert {} auto-escalated, predictedSeverity={}", savedAlert.getId(), predictedSeverity);
+        }
+
+        savedAlert = alertRepository.save(savedAlert);
         return AlertResponse.fromEntity(savedAlert);
     }
 
