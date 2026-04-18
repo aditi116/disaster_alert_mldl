@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     role ENUM('USER', 'ADMIN') DEFAULT 'USER',
+    reputation_score INT DEFAULT 0,
     enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -37,6 +38,9 @@ CREATE TABLE IF NOT EXISTS alerts (
     user_id BIGINT NOT NULL,
     status ENUM('ACTIVE', 'RESOLVED', 'FALSE_ALARM') DEFAULT 'ACTIVE',
     reliability_score INT DEFAULT 0,
+    predicted_severity INT,
+    credibility_label VARCHAR(20),
+    credibility_confidence FLOAT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (alert_type_id) REFERENCES alert_types(id),
@@ -94,6 +98,18 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (alert_id) REFERENCES alerts(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Reputation events table
+CREATE TABLE IF NOT EXISTS reputation_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    event_type VARCHAR(40) NOT NULL,
+    points INT NOT NULL,
+    alert_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (alert_id) REFERENCES alerts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Insert default alert types

@@ -3,6 +3,8 @@ package com.disasteralert.service;
 import com.disasteralert.entity.Alert;
 import com.disasteralert.entity.User;
 import com.disasteralert.entity.Vote;
+import com.disasteralert.ml.model.ReputationEventType;
+import com.disasteralert.ml.service.ReputationService;
 import com.disasteralert.repository.AlertRepository;
 import com.disasteralert.repository.UserRepository;
 import com.disasteralert.repository.VoteRepository;
@@ -19,15 +21,18 @@ public class VoteService {
     private final AlertRepository alertRepository;
     private final UserRepository userRepository;
     private final AlertService alertService;
+    private final ReputationService reputationService;
 
     public VoteService(VoteRepository voteRepository,
                       AlertRepository alertRepository,
                       UserRepository userRepository,
-                      AlertService alertService) {
+                      AlertService alertService,
+                      ReputationService reputationService) {
         this.voteRepository = voteRepository;
         this.alertRepository = alertRepository;
         this.userRepository = userRepository;
         this.alertService = alertService;
+        this.reputationService = reputationService;
     }
 
     @Transactional
@@ -66,6 +71,23 @@ public class VoteService {
             
             int scoreDelta = isUpvote ? 1 : -1;
             alertService.updateReliabilityScore(alertId, scoreDelta);
+        }
+
+        // Reputation hooks — re-fetch alert to get updated reliability score
+        alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new RuntimeException("Alert not found"));
+
+        // If alert crosses upvote threshold (10+ upvotes), reward alert creator
+        long upvotes = voteRepository.countUpvotesByAlertId(alertId);
+        if (upvotes == 10) { // exactly 10 to avoid firing repeatedly
+            reputationService.applyEvent(alert.getUser().getId(),
+                    ReputationEventType.ALERT_CONFIRMED, alertId);
+        }
+
+        // If alert drops below -5 reliability, penalize creator
+        if (alert.getReliabilityScore() <= -5) {
+            reputationService.applyEvent(alert.getUser().getId(),
+                    ReputationEventType.LOW_RELIABILITY, alertId);
         }
     }
 

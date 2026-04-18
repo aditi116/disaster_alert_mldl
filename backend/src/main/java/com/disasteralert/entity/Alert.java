@@ -49,6 +49,15 @@ public class Alert {
     @Column(name = "reliability_score")
     private Integer reliabilityScore = 0;
 
+    @Column(name = "predicted_severity")
+    private Integer predictedSeverity;
+
+    @Column(name = "credibility_label", length = 20)
+    private String credibilityLabel;
+
+    @Column(name = "credibility_confidence")
+    private Float credibilityConfidence;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

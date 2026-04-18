@@ -52,6 +52,9 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Set<Role> roles = new HashSet<>();
 
+    @Column(name = "reputation_score")
+    private Integer reputationScore = 0;
+
     private boolean enabled = true;
 
     @CreationTimestamp
@@ -96,9 +99,4 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return enabled;
     }
-}
-
-enum Role {
-    ROLE_USER,
-    ROLE_ADMIN
 }

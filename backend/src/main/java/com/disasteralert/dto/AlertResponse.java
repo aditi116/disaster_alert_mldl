@@ -16,6 +16,9 @@ public class AlertResponse {
     private Double longitude;
     private String status;
     private Integer reliabilityScore;
+    private Integer predictedSeverity;
+    private String credibilityLabel;
+    private Float credibilityConfidence;
     private Long userId;
     private String username;
     private LocalDateTime createdAt;
@@ -32,6 +35,9 @@ public class AlertResponse {
         response.setLongitude(alert.getLongitude());
         response.setStatus(alert.getStatus().name());
         response.setReliabilityScore(alert.getReliabilityScore());
+        response.setPredictedSeverity(alert.getPredictedSeverity());
+        response.setCredibilityLabel(alert.getCredibilityLabel());
+        response.setCredibilityConfidence(alert.getCredibilityConfidence());
         response.setUserId(alert.getUser().getId());
         response.setUsername(alert.getUser().getUsername());
         response.setCreatedAt(alert.getCreatedAt());
