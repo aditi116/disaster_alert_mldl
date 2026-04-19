@@ -47,13 +47,7 @@ public class ReputationService {
         int newScore = Math.max(0, user.getReputationScore() + eventType.getPoints());
         user.setReputationScore(newScore);
 
-        // 4. Auto-upgrade check:
-        //    If reputationScore >= 100 AND user has >= 5 alerts AND doesn't already have ROLE_ADMIN
-        if (newScore >= 100
-                && alertRepository.countByUser_Id(userId) >= 5
-                && !user.getRoles().contains(Role.ROLE_ADMIN)) {
-            user.getRoles().add(Role.ROLE_ADMIN);
-        }
+        // 4. Removed Auto-upgrade check for Admin authority.
 
         // 5. Save user
         userRepository.save(user);

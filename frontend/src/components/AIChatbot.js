@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, MapPin, Cloud, TrendingUp, AlertCircle, Trash2, Download, Plus, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { alertAPI, resourceAPI } from '../services/api';
+import { alertAPI, resourceAPI, mlAPI } from '../services/api';
 
 const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
   const { user } = useAuth();
@@ -10,7 +10,7 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm ResQNet AI Assistant. I can help you with:\n\n• 📊 Analyzing current alerts\n• 🗺️ Finding evacuation routes\n• ☁️ Weather updates\n• 📈 Disaster trends\n• 🚨 Creating alerts (Quick Create!)\n• 📦 Adding resources (Quick Add!)\n• 📞 Emergency contacts\n• 💡 Safety tips\n\nHow can I assist you today?",
+      text: "Hello! I'm ResQNet AI Assistant. I can help you with:\n\n• 🗺️ Finding evacuation routes\n• ☁️ Weather updates\n• 📈 Disaster trends\n• 🚨 Creating alerts (Quick Create!)\n• 📦 Adding resources (Quick Add!)\n• 📞 Emergency contacts\n• 💡 Safety tips\n\nHow can I assist you today?",
       sender: 'bot',
       timestamp: new Date()
     }
@@ -20,6 +20,7 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
   const [alertData, setAlertData] = useState(null);
   const [showQuickAlert, setShowQuickAlert] = useState(false);
   const [showQuickResource, setShowQuickResource] = useState(false);
+  const [pendingAlertData, setPendingAlertData] = useState(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -46,7 +47,6 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
   }, []);
 
   const quickResponses = [
-    { id: 1, text: "📊 Analyze current alerts", icon: <TrendingUp className="w-4 h-4" /> },
     { id: 2, text: "🗺️ Evacuation routes", icon: <MapPin className="w-4 h-4" /> },
     { id: 3, text: "☁️ Weather update", icon: <Cloud className="w-4 h-4" /> },
     { id: 4, text: "📞 Emergency contacts", icon: <AlertCircle className="w-4 h-4" /> },
@@ -55,15 +55,28 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
     { id: 7, text: "📦 Add resource", icon: <Package className="w-4 h-4" /> }
   ];
 
-  const getBotResponse = (userMessage) => {
+  const generateBotResponse = async (userMessage) => {
     const lowerMessage = userMessage.toLowerCase();
     const userName = user?.username || 'there';
+    const userId = user?.id;
     
-    // Analyze alerts
-    if (lowerMessage.includes('analyze') || lowerMessage.includes('current alert') || lowerMessage.includes('what\'s happening')) {
-      return `📊 **Alert Analysis**\n\nBased on recent data:\n\n• **Critical Alerts**: ${alertData?.critical || 0} high-severity incidents\n• **Active Alerts**: ${alertData?.active || 0} ongoing situations\n• **Most Common**: ${alertData?.commonType || 'Flood'} incidents\n• **Hotspot Area**: ${alertData?.hotspot || 'Downtown area'}\n\n⚠️ Stay vigilant and follow safety protocols!`;
+    // 4. Trust & Verification (Naive Bayes & Reputation)
+    if (lowerMessage.includes('status') || lowerMessage.includes('reputation') || lowerMessage.includes('trust') || lowerMessage.includes('my level')) {
+      if (!userId) return `You need to be logged in to check your Community Trust Score!`;
+      try {
+        const res = await mlAPI.getUserReputation(userId);
+        const data = res.data;
+        let p = data?.totalPoints || data?.reputationScore || 0;
+        let t = 'Bronze';
+        if (p >= 100) t = 'Platinum';
+        else if (p >= 50) t = 'Gold';
+        else if (p >= 20) t = 'Silver';
+        return `🌟 **Community Trust Status**\n\nHi ${userName}, your current Contribution Level is **${t}**.\nYou have a Community Trust Score of **${p} PTS**.\n\nKeep verifying alerts and sharing resources to increase your rank!`;
+      } catch (err) {
+        return `🌟 **Community Trust Status**\n\nI couldn't load your reputation profile right now.`;
+      }
     }
-    
+
     // Evacuation routes
     if (lowerMessage.includes('evacuation') || lowerMessage.includes('route') || lowerMessage.includes('escape')) {
       return `🗺️ **Evacuation Routes**\n\n**Primary Routes:**\n1. Highway 101 North → Safe Zone A\n2. Main Street East → Community Center\n3. River Road South → Emergency Shelter\n\n**Important:**\n• Follow official signage\n• Avoid flooded areas\n• Keep emergency kit ready\n• Check traffic updates\n\n📍 Nearest shelter: 2.3 km away`;
@@ -85,104 +98,98 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
     }
     
     // Safety tips
-    if (lowerMessage.includes('safe') || lowerMessage.includes('tip') || lowerMessage.includes('what to do') || lowerMessage.includes('prepare')) {
-      return `💡 **Safety Tips**\n\n**Before Disaster:**\n✅ Prepare emergency kit\n✅ Know evacuation routes\n✅ Save emergency contacts\n✅ Secure important documents\n\n**During Disaster:**\n✅ Stay calm\n✅ Follow official instructions\n✅ Avoid affected areas\n✅ Keep phone charged\n\n**After Disaster:**\n✅ Check for injuries\n✅ Document damage\n✅ Report to authorities\n✅ Help neighbors safely`;
+    if (lowerMessage.includes('safe') || lowerMessage.includes('tip') || lowerMessage.includes('what to do')) {
+      return `💡 **Safety Tips**\n\n**Before Disaster:**\n✅ Prepare emergency kit\n✅ Know evacuation routes\n✅ Know emergency contacts\n\n**During Disaster:**\n✅ Stay calm\n✅ Follow official instructions\n✅ Keep phone charged`;
     }
     
     // Report emergency - with quick create option
-    if (lowerMessage.includes('report') || lowerMessage.includes('create alert') || lowerMessage.includes('new alert') || lowerMessage.includes('add alert')) {
-      // Trigger quick alert form
+    if (lowerMessage.includes('report') || lowerMessage.includes('create alert') || lowerMessage.includes('add alert')) {
       setTimeout(() => setShowQuickAlert(true), 500);
-      return `🚨 **Quick Alert Creation**\n\nI can help you create an alert right here! I'll show you a quick form in a moment.\n\n**Or use the full form:**\n1. Click 'New Alert' button (top-right)\n2. Fill in all details\n3. Pick exact location on map\n\n**Quick form includes:**\n• Alert title\n• Description\n• Severity level\n• Alert type\n\nLet's get your alert posted quickly!`;
+      return `🚨 **Quick Alert Creation**\n\nI can help you create an alert right here! I'll show you a quick form in a moment.\n\n**Our classifier will automatically verify your report against historical credibility patterns.**`;
     }
     
-    // Resources - with quick add option
-    if (lowerMessage.includes('add resource') || lowerMessage.includes('share resource') || lowerMessage.includes('offer resource') || lowerMessage.includes('new resource')) {
-      // Trigger quick resource form
+    if (lowerMessage.includes('add resource') || lowerMessage.includes('share resource') || lowerMessage.includes('offer resource')) {
       setTimeout(() => setShowQuickResource(true), 500);
-      return `📦 **Quick Resource Addition**\n\nI can help you add a resource right here! I'll show you a quick form in a moment.\n\n**Or use the full form:**\n1. Click 'New Resource' button (top-right)\n2. Fill in all details\n3. Add location if needed\n\n**Quick form includes:**\n• Resource title\n• Description\n• Contact information\n• Status\n\nLet's share your resource quickly!`;
+      return `📦 **Quick Resource Addition**\n\nI can help you add a resource right here! I'll show you a quick form in a moment.`;
     }
     
-    // General resources query
+    // 2. Verified Resource Matching (KNN Integration)
     if (lowerMessage.includes('resource') || lowerMessage.includes('help') || lowerMessage.includes('need') || lowerMessage.includes('supply')) {
-      return `📦 **Resources Available**\n\n**How to Find:**\n1. Click 'Resources' tab\n2. Browse available items\n3. View location on map\n4. Contact provider\n\n**How to Share:**\nJust say "Add resource" and I'll help you create one!\n\n**Common Resources:**\n• Food & Water\n• Medical supplies\n• Shelter\n• Transportation`;
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          try {
+            const res = await mlAPI.getNearestResources(pos.coords.latitude, pos.coords.longitude);
+            const resources = res.data;
+            if (resources && resources.length > 0) {
+              const nearest = resources[0];
+              const dist = nearest.distanceKm || nearest.distance || 0;
+              resolve(`📦 **Verified Resource Matching**\n\nI've located the closest verified supply points.\nThe nearest is **${dist.toFixed(1)}km** away at [Location: ${nearest.title}].\n\nYou can contact them immediately via the Resources tab!`);
+            } else {
+              resolve(`📦 **Verified Resource Matching**\n\nI couldn't find any resources close to your location at the moment.`);
+            }
+          } catch (err) {
+            resolve(`📦 **Verified Resource Matching**\n\nI couldn't scan for nearest resources. Keep checking the main map!`);
+          }
+        }, () => {
+          resolve(`📦 **Verified Resource Matching**\n\nI need your location to find nearby resources using our proximity engine! Please allow location access.`);
+        });
+      });
     }
-    
+
     // Nearby alerts
     if (lowerMessage.includes('nearby') || lowerMessage.includes('near me') || lowerMessage.includes('around')) {
-      return `📍 **Nearby Alerts**\n\n**Within 5km:**\n⚠️ Flood warning (2.1 km)\n🔥 Fire incident (3.8 km)\n🚧 Road closure (4.2 km)\n\n**Status:**\n• 3 Critical\n• 5 Active\n• 2 Resolved\n\nCheck the map for exact locations!`;
+      return `📍 **Nearby Alerts**\n\nCheck the map for exact mapping boundaries! You can also type "Disaster trends" for generic metrics.`;
     }
     
-    // Greetings
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-      return `Hello ${userName}! 👋\n\nI'm here to help you stay safe during emergencies. I can provide:\n\n• Real-time alert analysis\n• Evacuation guidance\n• Weather updates\n• Safety recommendations\n\nWhat would you like to know?`;
+      return `Hello ${userName}! 👋\n\nI'm here to help you stay safe. I can provide:\n\n• Proximity-based resource matching\n• Trust & Community Reputation\n\nWhat would you like to know?`;
     }
     
-    // Thanks
     if (lowerMessage.includes('thank')) {
-      return `You're welcome, ${userName}! 😊\n\nStay safe and don't hesitate to ask if you need more help. Remember:\n\n• Check alerts regularly\n• Keep emergency contacts handy\n• Follow official instructions\n\nI'm always here to assist!`;
+      return `You're welcome, ${userName}! 😊\n\nStay safe! I'm always here to assist!`;
+    }
+
+    if (lowerMessage === 'proceed') {
+      return `Processing...`;
     }
     
-    // Help command
-    if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
-      return `🤖 **I Can Help You With:**\n\n📊 Alert Analysis\n🗺️ Evacuation Routes\n☁️ Weather Updates\n📈 Disaster Trends\n📞 Emergency Contacts\n💡 Safety Tips\n🚨 Reporting Emergencies\n📦 Finding Resources\n📍 Nearby Alerts\n\nJust ask me anything!`;
-    }
-    
-    // Default response with context
-    return `I'm not sure about that, but I can help you with:\n\n• **Alert Analysis** - Current situation\n• **Evacuation** - Safe routes\n• **Weather** - Latest forecast\n• **Emergency Contacts** - Quick dial\n• **Safety Tips** - Stay prepared\n\nTry asking: "What's happening nearby?" or "Show evacuation routes"`;
+    return `I'm not sure about that, but I can help you with:\n\n• **Resources** - Find nearby help\n• **Trust** - Check your contribution level\n\nTry asking: "Find resources nearby" or "What is my status?"`;
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    // Add user message
-    const userMsg = {
-      id: messages.length + 1,
-      text: inputMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
+    // Smart Duplicate Prevention Override
+    if (pendingAlertData && inputMessage.toLowerCase().trim() === 'proceed') {
+      const userMsg = { id: messages.length + 1, text: inputMessage, sender: 'user', timestamp: new Date() };
+      setMessages(prev => [...prev, userMsg]);
+      setInputMessage('');
+      
+      await handleQuickAlertSubmit({ ...pendingAlertData, confirmed: true });
+      setPendingAlertData(null);
+      return;
+    }
+
+    const userMsg = { id: messages.length + 1, text: inputMessage, sender: 'user', timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate bot typing and response
-    setTimeout(() => {
-      const botResponse = getBotResponse(inputMessage);
-      const botMsg = {
-        id: messages.length + 2,
-        text: botResponse,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 1000);
+    const botResponse = await generateBotResponse(userMsg.text);
+    const botMsg = { id: messages.length + 2, text: botResponse, sender: 'bot', timestamp: new Date() };
+    setMessages(prev => [...prev, botMsg]);
+    setIsTyping(false);
   };
 
-  const handleQuickResponse = (responseText) => {
-    // Add user message
-    const userMsg = {
-      id: messages.length + 1,
-      text: responseText,
-      sender: 'user',
-      timestamp: new Date()
-    };
+  const handleQuickResponse = async (responseText) => {
+    const userMsg = { id: messages.length + 1, text: responseText, sender: 'user', timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setIsTyping(true);
 
-    // Get bot response
-    setTimeout(() => {
-      const botResponse = getBotResponse(responseText);
-      const botMsg = {
-        id: messages.length + 2,
-        text: botResponse,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 1000);
+    const botResponse = await generateBotResponse(responseText);
+    const botMsg = { id: messages.length + 2, text: botResponse, sender: 'bot', timestamp: new Date() };
+    setMessages(prev => [...prev, botMsg]);
+    setIsTyping(false);
   };
 
   const clearChat = () => {
@@ -212,20 +219,36 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
 
   const handleQuickAlertSubmit = async (alertData) => {
     try {
+      // 3. Smart Duplicate Prevention (KNN Alert Integration)
+      if (!alertData.confirmed) {
+        const typeMap = { 'FLOOD': 2, 'FIRE': 1, 'EARTHQUAKE': 5, 'STORM': 5, 'ACCIDENT': 5, 'OTHER': 5 };
+        const simRes = await mlAPI.getSimilarAlerts(alertData.latitude, alertData.longitude, typeMap[alertData.alertType] || 1, alertData.severity);
+        
+        if (simRes.data && simRes.data.length > 0) {
+          setShowQuickAlert(false);
+          setPendingAlertData(alertData);
+          const warningMsg = {
+            id: messages.length + 1,
+            text: `⚠️ **Duplicates Detected**\n\nIt looks like there's already a similar report nearby. Would you like to add an update to that one instead, or proceed with a new report?\n\n(Type "PROCEED" to continue creating it)`,
+            sender: 'bot',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, warningMsg]);
+          return;
+        }
+      }
+
       await alertAPI.create(alertData);
       toast.success('Alert created successfully!');
       setShowQuickAlert(false);
       
-      // Add success message to chat
       const successMsg = {
         id: messages.length + 1,
-        text: `✅ **Alert Created Successfully!**\n\nYour alert "${alertData.title}" has been posted and is now visible to the community.\n\n**What's next?**\n• View it on the map\n• Monitor for updates\n• Check community responses\n\nStay safe!`,
+        text: `✅ **Alert Created Successfully!**\n\nYour alert "${alertData.title}" has been posted and is now verified by the ML Classifier.\n\n**What's next?**\n• View it on the map\n• Let community users vote to verify its credibility`,
         sender: 'bot',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, successMsg]);
-      
-      // Notify parent component
       if (onAlertCreated) onAlertCreated();
     } catch (error) {
       toast.error('Failed to create alert');

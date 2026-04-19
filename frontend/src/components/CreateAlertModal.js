@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, MapPin, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import { alertAPI } from '../services/api';
+import { alertAPI, mlAPI } from '../services/api';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -48,6 +48,52 @@ const CreateAlertModal = ({ onClose, onSuccess }) => {
   const [error, setError] = useState('');
   const [showMap, setShowMap] = useState(false);
   const [mapPosition, setMapPosition] = useState(null);
+  
+  // Duplication tracking
+  const [similarAlerts, setSimilarAlerts] = useState([]);
+
+  useEffect(() => {
+    const fetchSimilarAlerts = async () => {
+      // Proceed if valid lat/lng exists
+      if (
+        formData.latitude !== '' && 
+        formData.longitude !== '' && 
+        !isNaN(formData.latitude) && 
+        !isNaN(formData.longitude)
+      ) {
+        try {
+          const typeName = ALERT_TYPES.find(t => t.id === formData.alertTypeId)?.name || 'other';
+          const res = await mlAPI.getSimilarAlerts(
+            formData.latitude,
+            formData.longitude,
+            typeName,
+            formData.severity
+          );
+          
+          // KNN returns top 5 alerts, but we want to filter out ones that aren't actually close
+          // Assuming the distance is a normalized metric where < 0.4 implies a very close match in location/severity/type
+          // If distance isn't reliable enough, we at least limit it to max 3 items to avoid overwhelming the modal.
+          const duplicates = (res.data || [])
+            .filter(item => item.distance < 0.4) 
+            .slice(0, 3);
+            
+          setSimilarAlerts(duplicates);
+        } catch (err) {
+          console.error("Failed to fetch similar alerts", err);
+          setSimilarAlerts([]);
+        }
+      } else {
+        setSimilarAlerts([]);
+      }
+    };
+
+    const debounceTimer = setTimeout(() => {
+      fetchSimilarAlerts();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.latitude, formData.longitude, formData.alertTypeId, formData.severity]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -265,22 +311,53 @@ const CreateAlertModal = ({ onClose, onSuccess }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+            
+            {/* --- Similarity Preview Panel --- */}
+            {similarAlerts.length > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-2">
+                <div className="flex items-center space-x-2 text-orange-800 mb-3">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-600" />
+                  <h3 className="font-semibold text-sm">Possible duplicates detected nearby</h3>
+                </div>
+                <div className="flex overflow-x-auto space-x-3 pb-2">
+                  {similarAlerts.map(alert => (
+                    <div key={alert.id} className="flex-shrink-0 w-48 bg-white border border-orange-100 rounded-md p-3 shadow-sm">
+                      <p className="text-sm font-bold text-gray-900 truncate" title={alert.title}>
+                        {alert.title}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                          Sev {alert.severity}
+                        </span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          {alert.distance != null ? `${alert.distance.toFixed(2)} dist` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`flex-1 px-4 py-2 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm
+                ${similarAlerts.length > 0 
+                  ? 'bg-orange-600 hover:bg-orange-700' 
+                  : 'bg-blue-600 hover:bg-blue-700'}`
+              }
             >
-              {loading ? 'Creating...' : 'Create Alert'}
+              {loading ? 'Creating...' : similarAlerts.length > 0 ? 'Create Anyway' : 'Create Alert'}
             </button>
           </div>
         </form>

@@ -9,7 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 const BackgroundDots = () => {
   const dots = Array(20).fill(0);
   return (
-    <div className="fixed inset-0 overflow-hidden">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
       {dots.map((_, i) => (
         <motion.div
           key={i}

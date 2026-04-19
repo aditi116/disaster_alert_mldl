@@ -6,7 +6,13 @@ A real-time, mobile-responsive application for crowdsourced disaster alerts and 
 
 - User authentication (Register/Login)
 - Geo-tagged disaster alerts with severity levels
+- **Machine Learning Integrations:**
+  - **Naive Bayes Classification** for automated Alert Credibility Analysis.
+  - **K-Means Clustering** for geospatial Disaster Hotspot grouping.
+  - **K-Nearest Neighbors (KNN)** algorithms for Proximity Resource Matching and Smart Duplicate Detection.
 - Upvote/downvote system for alert verification
+- Dynamic Meritocratic Reputation logic (points and tiered statuses)
+- ResQNet AI Assistant (Smart Context Chatbot)
 - Resource sharing (offers/requests)
 - Interactive map view
 - Real-time updates
@@ -41,6 +47,9 @@ A real-time, mobile-responsive application for crowdsourced disaster alerts and 
    npm install
    npm start
    ```
+
+3. **Machine Learning Testing Suite** (Optional)
+   The project includes a `testcases/` array featuring 6 self-contained python scripts (using `requests` and `mysql-connector-python`) specifically designed to populate mock data automatically. Navigate to `testcases/` and run modules like `demo_knn_duplicates.py` from the shell string to emulate localized datasets cleanly.
 
 ## API Documentation
 

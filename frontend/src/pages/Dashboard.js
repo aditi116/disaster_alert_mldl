@@ -3,12 +3,13 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { AlertTriangle, Plus, LogOut, Package, X, Trash2, Moon, Sun, Search, Filter, BarChart3, TrendingUp, Users, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import { alertAPI, resourceAPI } from '../services/api';
+import { alertAPI, resourceAPI, mlAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import AlertCard from '../components/AlertCard';
+import AlertCard, { CredibilityBadge } from '../components/AlertCard';
 import CreateAlertModal from '../components/CreateAlertModal';
 import CreateResourceModal from '../components/CreateResourceModal';
+import ReputationModal from '../components/ReputationModal';
 import AIChatbot from '../components/AIChatbot';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -66,6 +67,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [showResourceModal, setShowResourceModal] = useState(false);
+  const [selectedReputationUserId, setSelectedReputationUserId] = useState(null);
   const [activeTab, setActiveTab] = useState('alerts');
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItemType, setSelectedItemType] = useState(null);
@@ -76,12 +78,39 @@ const Dashboard = () => {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  
+  // Nearest Resources Engine state
+  const [nearestResources, setNearestResources] = useState([]);
+  const [loadingNearestResources, setLoadingNearestResources] = useState(false);
 
   useEffect(() => {
     fetchAlerts();
     fetchResources();
     getCurrentLocation();
   }, []);
+
+  // Fetch Nearest Resources when an alert is selected
+  useEffect(() => {
+    if (selectedItem && selectedItemType === 'alert') {
+      const fetchNearest = async () => {
+        setLoadingNearestResources(true);
+        try {
+          const res = await mlAPI.getNearestResources(selectedItem.latitude, selectedItem.longitude);
+          // Backend returns top available resources with distanceKm
+          setNearestResources((res.data || []).slice(0, 3));
+        } catch (err) {
+          console.error("Failed to fetch nearest resources", err);
+          setNearestResources([]);
+        } finally {
+          setLoadingNearestResources(false);
+        }
+      };
+      
+      fetchNearest();
+    } else {
+      setNearestResources([]);
+    }
+  }, [selectedItem, selectedItemType]);
 
   const getCurrentLocation = () => {
     setLocationLoading(true);
@@ -112,6 +141,12 @@ const Dashboard = () => {
       console.warn('Geolocation not supported');
       toast.error('Geolocation not supported by your browser.', { id: 'location' });
     }
+  };
+
+  // Guard wrapper: prevents a second geolocation request while one is in flight
+  const handleRecenter = () => {
+    if (locationLoading) return;
+    getCurrentLocation();
   };
 
   useEffect(() => {
@@ -591,6 +626,7 @@ const Dashboard = () => {
                           setSelectedItem(alert);
                           setSelectedItemType('alert');
                         }}
+                        onClickUser={(uid) => setSelectedReputationUserId(uid)}
                       />
                     ))}
                   </div>
@@ -627,6 +663,23 @@ const Dashboard = () => {
                             <span className="text-xs text-gray-500 dark:text-gray-400">📞 {resource.contactInfo}</span>
                           )}
                         </div>
+                        {/* Resource Provider -> triggers Reputation logic */}
+                        {(resource.providerId || resource.userId) && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-slate-700/50 flex justify-end">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              provided by{' '}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedReputationUserId(resource.providerId || resource.userId);
+                                }}
+                                className="font-semibold text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 focus:outline-none hover:underline focus:underline cursor-pointer transition-colors"
+                              >
+                                {resource.providerName || resource.username || `User #${resource.providerId || resource.userId}`}
+                              </button>
+                            </span>
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                   </div>
@@ -638,25 +691,69 @@ const Dashboard = () => {
 
         {/* Map View */}
         <div className="flex-1 relative">
-          {/* Recenter Button */}
-          {userLocation && (
-            <button
-              onClick={getCurrentLocation}
-              className="absolute top-4 right-4 z-[1000] bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-slate-600 flex items-center space-x-2 transition-all"
-              title="Recenter map on your location"
-            >
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm font-medium">My Location</span>
-            </button>
-          )}
-
-          {/* Location Loading Indicator */}
-          {locationLoading && (
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-              <span className="text-sm font-medium">Finding your location...</span>
-            </div>
-          )}
+          {/* ── Recenter FAB (glassmorphism) ── */}
+          <motion.button
+            id="recenter-map-btn"
+            onClick={handleRecenter}
+            disabled={locationLoading}
+            title={locationLoading ? 'Finding your location…' : 'Recenter map on your location'}
+            // entrance: slide in from the right
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28, delay: 0.4 }}
+            whileHover={locationLoading ? {} : { scale: 1.08, y: -2 }}
+            whileTap={locationLoading ? {} : { scale: 0.94 }}
+            className={`
+              absolute top-4 right-4 z-[1000]
+              flex items-center gap-2
+              px-4 py-2.5 rounded-xl
+              /* glassmorphism */
+              bg-white/70 dark:bg-slate-800/70
+              backdrop-blur-md
+              border border-white/50 dark:border-slate-600/60
+              shadow-[0_8px_32px_rgba(0,0,0,0.18)]
+              text-slate-700 dark:text-slate-200
+              font-medium text-sm
+              transition-opacity duration-200
+              ${locationLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-white/90 dark:hover:bg-slate-800/90 cursor-pointer'}
+            `}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {locationLoading ? (
+                <motion.span
+                  key="spinner"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center gap-2"
+                >
+                  {/* Spinner */}
+                  <span className="relative flex h-4 w-4 shrink-0">
+                    <span className="animate-spin absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent" />
+                  </span>
+                  <span>Locating…</span>
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="idle"
+                  initial={{ opacity: 0, rotate: 90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: -90 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-center gap-2"
+                >
+                  {/* Pulsing dot accent */}
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                  </span>
+                  <MapPin className="w-4 h-4 text-blue-500" />
+                  <span>My Location</span>
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
 
           <MapContainer
             center={mapCenter}
@@ -781,6 +878,15 @@ const Dashboard = () => {
       </div>
 
       {/* Modals */}
+      <AnimatePresence>
+        {selectedReputationUserId && (
+          <ReputationModal 
+            userId={selectedReputationUserId} 
+            onClose={() => setSelectedReputationUserId(null)} 
+          />
+        )}
+      </AnimatePresence>
+
       {showAlertModal && (
         <CreateAlertModal
           onClose={() => setShowAlertModal(false)}
@@ -821,11 +927,21 @@ const Dashboard = () => {
             <div className="p-6 space-y-4">
               {selectedItemType === 'alert' ? (
                 <>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedItem.title}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Created {new Date(selectedItem.createdAt).toLocaleString()}
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedItem.title}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Created {new Date(selectedItem.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    {selectedItem.credibilityLabel && (
+                      <div className="shrink-0">
+                        <CredibilityBadge 
+                          credibilityLabel={selectedItem.credibilityLabel}
+                          credibilityConfidence={selectedItem.credibilityConfidence}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -833,7 +949,13 @@ const Dashboard = () => {
                     <p className="text-gray-900 dark:text-gray-100">{selectedItem.description || 'No description provided'}</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                      <span className="inline-block px-3 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200">
+                        {selectedItem.alertType || selectedItem.resourceType || 'Unknown Type'}
+                      </span>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Severity</label>
                       <span className={`inline-block px-3 py-1 rounded text-white ${getSeverityColor(selectedItem.severity)}`}>
@@ -858,6 +980,71 @@ const Dashboard = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reliability Score</label>
                     <p className="text-gray-900 dark:text-gray-100">{selectedItem.reliabilityScore || 0} votes</p>
+                  </div>
+                  
+                  {/* --- Action Panel: Nearby Resources --- */}
+                  <div className="mt-6 pt-5 border-t border-gray-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Nearby Resources</h3>
+                    {loadingNearestResources ? (
+                      <div className="flex justify-center items-center py-4">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-green-500 border-t-transparent"></div>
+                        <span className="ml-2 text-sm text-gray-500">Finding nearby help...</span>
+                      </div>
+                    ) : nearestResources.length > 0 ? (
+                      <div className="space-y-3">
+                        {nearestResources.map(res => {
+                          const dist = res.distanceKm || res.distance;
+                          let bgClass = "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
+                          let textClass = "text-green-700 dark:text-green-400";
+                          
+                          if (dist >= 5 && dist <= 15) {
+                            bgClass = "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800";
+                            textClass = "text-yellow-700 dark:text-yellow-400";
+                          } else if (dist > 15) {
+                            bgClass = "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
+                            textClass = "text-orange-700 dark:text-orange-400";
+                          }
+                          
+                          return (
+                            <div key={res.id} className={`p-4 border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${bgClass}`}>
+                              <div>
+                                <h4 className="font-semibold text-sm text-gray-900 dark:text-white">{res.title}</h4>
+                                <p className={`text-xs font-medium mt-1 ${textClass}`}>
+                                  {dist != null ? dist.toFixed(1) : '< 0.1'} km away
+                                </p>
+                              </div>
+                              {res.contactInfo ? (
+                                <button
+                                  className="shrink-0 px-4 py-2 bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    alert(`Contact: ${res.contactInfo}`);
+                                  }}
+                                >
+                                  Contact: {res.contactInfo}
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 italic">No contact info</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-slate-700/50 p-6 rounded-xl text-center border border-dashed border-gray-300 dark:border-slate-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">No available resources found nearby.</p>
+                        <button 
+                          onClick={() => {
+                             setSelectedItem(null);
+                             setSelectedItemType(null);
+                             setShowResourceModal(true);
+                          }}
+                          className="px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 hover:shadow transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        >
+                          Request Help / Create Resource
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

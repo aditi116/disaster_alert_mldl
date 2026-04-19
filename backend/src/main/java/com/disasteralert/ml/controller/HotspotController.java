@@ -18,7 +18,6 @@ public class HotspotController {
     private KMeansClusteringService kMeansClusteringService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getHotspots() {
         List<ClusterResultDTO> clusters = kMeansClusteringService.getCachedResult();
         return ResponseEntity.ok(clusters);

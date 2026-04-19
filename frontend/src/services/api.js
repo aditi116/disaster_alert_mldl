@@ -62,4 +62,16 @@ export const resourceAPI = {
   delete: (id) => api.delete(`/resources/${id}`),
 };
 
+// ML API
+export const mlAPI = {
+  getSimilarAlerts: (lat, lng, type, severity) =>
+    api.get("/ml/knn/similar-alerts", { params: { lat, lng, type, severity } }),
+  getNearestResources: (lat, lng) => 
+    api.get("/ml/knn/nearest-resources", { params: { lat, lng } }),
+  getUserReputation: (userId) => api.get(`/ml/reputation/users/${userId}`),
+  getHotspots: () => api.get("/ml/hotspots"),
+};
+
+
+
 export default api;
