@@ -15,7 +15,7 @@ def reset_db():
         print("Disabling foreign key checks...")
         cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
         
-        tables_to_truncate = ['reputation_event', 'votes', 'resources', 'alerts']
+        tables_to_truncate = ['reputation_events', 'votes', 'resources', 'alerts']
         for table in tables_to_truncate:
             print(f"Truncating table: {table}...")
             cursor.execute(f"TRUNCATE TABLE {table};")
