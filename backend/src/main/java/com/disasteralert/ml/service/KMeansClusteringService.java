@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,11 +26,13 @@ public class KMeansClusteringService {
     private List<ClusterResultDTO> cachedResult = new ArrayList<>();
 
     @PostConstruct
+    @Transactional(readOnly = true)
     public void init() {
         runClustering();
     }
 
     @Scheduled(fixedRate = 600000) // every 10 minutes
+    @Transactional(readOnly = true)
     public void runClustering() {
         log.info("Running K-Means clustering on active alerts...");
 
@@ -70,8 +73,7 @@ public class KMeansClusteringService {
                 for (int c = 0; c < k; c++) {
                     double dist = Math.sqrt(
                             Math.pow(aLat - centroids[c][0], 2) +
-                            Math.pow(aLng - centroids[c][1], 2)
-                    );
+                                    Math.pow(aLng - centroids[c][1], 2));
                     if (dist < minDist) {
                         minDist = dist;
                         bestCluster = c;
@@ -97,8 +99,7 @@ public class KMeansClusteringService {
                     double newLng = sumLng / count;
                     double movement = Math.sqrt(
                             Math.pow(newLat - centroids[c][0], 2) +
-                            Math.pow(newLng - centroids[c][1], 2)
-                    );
+                                    Math.pow(newLng - centroids[c][1], 2));
                     maxMovement = Math.max(maxMovement, movement);
                     centroids[c][0] = newLat;
                     centroids[c][1] = newLng;

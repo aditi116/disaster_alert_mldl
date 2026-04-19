@@ -12,32 +12,30 @@ import java.util.List;
 
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, Long> {
-    
-    Page<Alert> findByStatus(Alert.AlertStatus status, Pageable pageable);
-    
+
+    @Query("SELECT DISTINCT a FROM Alert a LEFT JOIN FETCH a.alertType WHERE a.status = :status")
+    Page<Alert> findByStatus(@Param("status") Alert.AlertStatus status, Pageable pageable);
+
     @Query("SELECT a FROM Alert a WHERE " +
-           "(a.latitude BETWEEN :minLat AND :maxLat) AND " +
-           "(a.longitude BETWEEN :minLng AND :maxLng) " +
-           "ORDER BY a.createdAt DESC")
+            "(a.latitude BETWEEN :minLat AND :maxLat) AND " +
+            "(a.longitude BETWEEN :minLng AND :maxLng) " +
+            "ORDER BY a.createdAt DESC")
     List<Alert> findWithinBoundingBox(
-        @Param("minLat") double minLat,
-        @Param("maxLat") double maxLat,
-        @Param("minLng") double minLng,
-        @Param("maxLng") double maxLng,
-        Pageable pageable
-    );
-    
+            @Param("minLat") double minLat,
+            @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng,
+            @Param("maxLng") double maxLng,
+            Pageable pageable);
+
     @Query(value = "SELECT a.* FROM alerts a WHERE " +
             "ST_Distance_Sphere(point(a.longitude, a.latitude), point(:lng, :lat)) <= :radius " +
             "AND a.status = 'ACTIVE' " +
-            "ORDER BY a.created_at DESC", 
-            nativeQuery = true)
+            "ORDER BY a.created_at DESC", nativeQuery = true)
     List<Alert> findNearbyAlerts(
-        @Param("lat") double latitude,
-        @Param("lng") double longitude,
-        @Param("radius") double radiusInMeters,
-        Pageable pageable
-    );
-    
+            @Param("lat") double latitude,
+            @Param("lng") double longitude,
+            @Param("radius") double radiusInMeters,
+            Pageable pageable);
+
     Long countByUser_Id(Long userId);
 }
