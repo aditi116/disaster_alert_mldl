@@ -125,12 +125,19 @@ public class KMeansClusteringService {
             // Collect alerts in this cluster
             List<Long> alertIds = new ArrayList<>();
             Map<String, Integer> typeFreq = new HashMap<>();
+            double maxRadiusKm = 0.0;
+
             for (int i = 0; i < alertCount; i++) {
                 if (assignments[i] == c) {
                     Alert a = alerts.get(i);
                     alertIds.add(a.getId());
                     String typeName = a.getAlertType().getName();
                     typeFreq.merge(typeName, 1, Integer::sum);
+
+                    // Calculate distance from centroid to this alert
+                    double distKm = haversineKm(centroids[c][0], centroids[c][1],
+                            a.getLatitude(), a.getLongitude());
+                    maxRadiusKm = Math.max(maxRadiusKm, distKm);
                 }
             }
 
@@ -144,6 +151,10 @@ public class KMeansClusteringService {
                     .orElse("Unknown");
             dto.setDominantAlertType(dominant);
 
+            // Calculate radius with padding and minimum
+            double radiusMeters = Math.max(1000.0, (maxRadiusKm * 1000.0) + 500.0);
+            dto.setRadiusMeters(radiusMeters);
+
             results.add(dto);
         }
 
@@ -153,5 +164,23 @@ public class KMeansClusteringService {
 
     public List<ClusterResultDTO> getCachedResult() {
         return cachedResult;
+    }
+
+    /**
+     * Haversine formula to calculate distance in kilometers
+     * between two lat/lng coordinates
+     */
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final int EARTH_RADIUS_KM = 6371;
+
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return EARTH_RADIUS_KM * c;
     }
 }

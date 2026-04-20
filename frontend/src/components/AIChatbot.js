@@ -534,7 +534,7 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
                   className={`max-w-[80%] rounded-lg px-4 py-2 shadow-md ${
                     message.sender === "user"
                       ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-                      : "bg-white text-gray-900 border border-gray-200"
+                      : "bg-white text-gray-800 border border-gray-200"
                   }`}
                 >
                   <p className="text-sm whitespace-pre-line leading-relaxed">
@@ -600,7 +600,7 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
                   <button
                     key={qr.id}
                     onClick={() => handleQuickResponse(qr.text)}
-                    className="flex items-center space-x-2 text-xs px-3 py-2 bg-white text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all shadow-sm hover:shadow-md border border-gray-200"
+                    className="flex items-center space-x-2 text-xs px-3 py-2 bg-white text-gray-900 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all shadow-sm hover:shadow-md border border-gray-200"
                   >
                     {qr.icon}
                     <span className="font-medium">{qr.text}</span>
@@ -619,7 +619,7 @@ const AIChatbot = ({ onAlertCreated, onResourceCreated }) => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
               />
               <button
                 onClick={handleSendMessage}
@@ -692,7 +692,7 @@ const QuickAlertForm = ({ onSubmit, onCancel }) => {
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             placeholder="e.g., Flood on Main Street"
           />
         </div>
@@ -707,7 +707,7 @@ const QuickAlertForm = ({ onSubmit, onCancel }) => {
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             rows="2"
             placeholder="Describe the situation..."
           />
@@ -723,7 +723,7 @@ const QuickAlertForm = ({ onSubmit, onCancel }) => {
               onChange={(e) =>
                 setFormData({ ...formData, severity: parseInt(e.target.value) })
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="1">1 - Low</option>
               <option value="2">2 - Moderate</option>
@@ -745,7 +745,7 @@ const QuickAlertForm = ({ onSubmit, onCancel }) => {
                   alertTypeId: parseInt(e.target.value),
                 })
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="1">Fire</option>
               <option value="2">Flood</option>
@@ -820,7 +820,7 @@ const QuickResourceForm = ({ onSubmit, onCancel }) => {
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
             placeholder="e.g., Food & Water Available"
           />
         </div>
@@ -835,7 +835,7 @@ const QuickResourceForm = ({ onSubmit, onCancel }) => {
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
             rows="2"
             placeholder="Describe what you're offering..."
           />
@@ -852,7 +852,7 @@ const QuickResourceForm = ({ onSubmit, onCancel }) => {
             onChange={(e) =>
               setFormData({ ...formData, contactInfo: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
             placeholder="Phone or email"
           />
         </div>
@@ -870,7 +870,7 @@ const QuickResourceForm = ({ onSubmit, onCancel }) => {
                   resourceTypeId: parseInt(e.target.value),
                 })
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
             >
               <option value="1">Food & Water</option>
               <option value="2">Shelter</option>
@@ -890,7 +890,7 @@ const QuickResourceForm = ({ onSubmit, onCancel }) => {
               onChange={(e) =>
                 setFormData({ ...formData, status: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
             >
               <option value="AVAILABLE">Available</option>
               <option value="REQUESTED">Requested</option>

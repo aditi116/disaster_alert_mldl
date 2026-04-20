@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  Circle,
+} from "react-leaflet";
 import {
   AlertTriangle,
   Plus,
@@ -905,14 +912,14 @@ const Dashboard = () => {
               <Circle
                 key={`hotspot-${idx}`}
                 center={[cluster.centroidLat, cluster.centroidLng]}
-                radius={3000}
+                radius={cluster.radiusMeters || 3000}
                 pathOptions={{
-                  fillColor: "#ff6b6b",
-                  color: "#ff6b6b",
-                  weight: 2,
+                  fillColor: "#ef4444",
+                  color: "#b91c1c",
+                  weight: 4,
                   opacity: 0.3,
                   fillOpacity: 0.15,
-                  dashArray: "5, 5",
+                  dashArray: "6 4",
                 }}
               >
                 <Popup>

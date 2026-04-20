@@ -12,4 +12,5 @@ public class ClusterResultDTO {
     private int alertCount;
     private String dominantAlertType;
     private List<Long> alertIds;
+    private Double radiusMeters;
 }
