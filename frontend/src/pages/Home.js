@@ -41,7 +41,7 @@ export default function Home() {
             <Zap className="w-5 h-5 text-white dark:text-slate-900" />
           </div>
           <span className="font-[Playfair_Display] font-bold text-xl tracking-tight text-slate-900 dark:text-white">
-            Disaster<span className="text-amber-600 dark:text-amber-500">Alert</span>
+            Res<span className="text-amber-600 dark:text-amber-500">QNet</span>
           </span>
         </div>
         <div className="flex items-center gap-6">

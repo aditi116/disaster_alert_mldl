@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import {
   AlertTriangle,
   Plus,
@@ -103,9 +103,13 @@ const Dashboard = () => {
   const [nearestResources, setNearestResources] = useState([]);
   const [loadingNearestResources, setLoadingNearestResources] = useState(false);
 
+  // K-Means Hotspots state
+  const [hotspots, setHotspots] = useState([]);
+
   useEffect(() => {
     fetchAlerts();
     fetchResources();
+    fetchHotspots();
     getCurrentLocation();
   }, []);
 
@@ -246,6 +250,15 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error fetching resources:", error);
       toast.error("Failed to load resources");
+    }
+  };
+
+  const fetchHotspots = async () => {
+    try {
+      const response = await mlAPI.getHotspots();
+      setHotspots(response.data || []);
+    } catch (error) {
+      console.error("Error fetching hotspots:", error);
     }
   };
 
@@ -887,6 +900,46 @@ const Dashboard = () => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            {/* K-Means Hotspot Clusters - Translucent circles */}
+            {hotspots.map((cluster, idx) => (
+              <Circle
+                key={`hotspot-${idx}`}
+                center={[cluster.centroidLat, cluster.centroidLng]}
+                radius={3000}
+                pathOptions={{
+                  fillColor: "#ff6b6b",
+                  color: "#ff6b6b",
+                  weight: 2,
+                  opacity: 0.3,
+                  fillOpacity: 0.15,
+                  dashArray: "5, 5",
+                }}
+              >
+                <Popup>
+                  <div className="p-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-amber-700 font-semibold">
+                        🎯 HOTSPOT CLUSTER
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      Cluster {cluster.clusterId + 1}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Alerts: {cluster.alertCount}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Type: {cluster.dominantAlertType}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Centroid: ({cluster.centroidLat.toFixed(4)},
+                      {cluster.centroidLng.toFixed(4)})
+                    </p>
+                  </div>
+                </Popup>
+              </Circle>
+            ))}
+
             {/* Alert Markers - Red */}
             {alerts.map((alert) => (
               <Marker

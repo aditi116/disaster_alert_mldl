@@ -47,9 +47,7 @@ public class ReputationService {
         int newScore = Math.max(0, user.getReputationScore() + eventType.getPoints());
         user.setReputationScore(newScore);
 
-        // 4. Removed Auto-upgrade check for Admin authority.
-
-        // 5. Save user
+        // 4. Save user
         userRepository.save(user);
     }
 
