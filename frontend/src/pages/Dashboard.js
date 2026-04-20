@@ -1137,26 +1137,13 @@ const Dashboard = () => {
             <div className="p-6 space-y-4">
               {selectedItemType === "alert" ? (
                 <>
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {selectedItem.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Created{" "}
-                        {new Date(selectedItem.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    {selectedItem.credibilityLabel && (
-                      <div className="shrink-0">
-                        <CredibilityBadge
-                          credibilityLabel={selectedItem.credibilityLabel}
-                          credibilityConfidence={
-                            selectedItem.credibilityConfidence
-                          }
-                        />
-                      </div>
-                    )}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {selectedItem.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Created {new Date(selectedItem.createdAt).toLocaleString()}
+                    </p>
                   </div>
 
                   <div>
@@ -1174,18 +1161,14 @@ const Dashboard = () => {
                         Type
                       </label>
                       <span className="inline-block px-3 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200">
-                        {selectedItem.alertType ||
-                          selectedItem.resourceType ||
-                          "Unknown Type"}
+                        {selectedItem.alertType || selectedItem.resourceType || "Unknown"}
                       </span>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Severity
                       </label>
-                      <span
-                        className={`inline-block px-3 py-1 rounded text-white ${getSeverityColor(selectedItem.severity)}`}
-                      >
+                      <span className={`inline-block px-3 py-1 rounded text-white ${getSeverityColor(selectedItem.severity)}`}>
                         Level {selectedItem.severity}
                       </span>
                     </div>
@@ -1204,22 +1187,17 @@ const Dashboard = () => {
                       Location
                     </label>
                     <p className="text-gray-900 dark:text-gray-100">
-                      📍 {selectedItem.latitude.toFixed(6)},{" "}
-                      {selectedItem.longitude.toFixed(6)}
+                      📍 {selectedItem.latitude.toFixed(6)}, {selectedItem.longitude.toFixed(6)}
                     </p>
                     <button
                       onClick={() => {
-                        setMapCenter([
-                          selectedItem.latitude,
-                          selectedItem.longitude,
-                        ]);
+                        setMapCenter([selectedItem.latitude, selectedItem.longitude]);
                         setSelectedItem(null);
                         setSelectedItemType(null);
                       }}
-                      className="mt-2 flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                      className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
                     >
-                      <MapPin className="w-4 h-4" />
-                      <span>Show on Map</span>
+                      Show on Map
                     </button>
                   </div>
 
@@ -1232,89 +1210,57 @@ const Dashboard = () => {
                     </p>
                   </div>
 
-                  {/* --- Action Panel: Nearby Resources --- */}
-                  <div className="mt-6 pt-5 border-t border-gray-200 dark:border-slate-700">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                      Nearby Resources
-                    </h3>
-                    {loadingNearestResources ? (
-                      <div className="flex justify-center items-center py-4">
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-green-500 border-t-transparent"></div>
-                        <span className="ml-2 text-sm text-gray-500">
-                          Finding nearby help...
-                        </span>
+                  {selectedItem.credibilityLabel && (
+                    <div className="mt-6 pt-5 border-t border-gray-200 dark:border-slate-700">
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                        ✓ Alert Verification
+                      </h4>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Classification:
+                          </span>
+                          <CredibilityBadge
+                            credibilityLabel={selectedItem.credibilityLabel}
+                            credibilityConfidence={selectedItem.credibilityConfidence}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          <p className="mt-2">
+                            {selectedItem.credibilityLabel === 'CREDIBLE' &&
+                              'High credibility based on content analysis and reliability patterns.'}
+                            {selectedItem.credibilityLabel === 'SUSPICIOUS' &&
+                              'Mixed signals detected. Review source and content before taking action.'}
+                            {selectedItem.credibilityLabel === 'SPAM' &&
+                              'Likely spam or misinformation. Verify with official sources.'}
+                          </p>
+                        </div>
                       </div>
-                    ) : nearestResources.length > 0 ? (
-                      <div className="space-y-3">
-                        {nearestResources.map((res) => {
-                          const dist = res.distanceKm || res.distance;
-                          let bgClass =
-                            "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
-                          let textClass = "text-green-700 dark:text-green-400";
+                    </div>
+                  )}
 
-                          if (dist >= 5 && dist <= 15) {
-                            bgClass =
-                              "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800";
-                            textClass = "text-yellow-700 dark:text-yellow-400";
-                          } else if (dist > 15) {
-                            bgClass =
-                              "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
-                            textClass = "text-orange-700 dark:text-orange-400";
-                          }
-
-                          return (
-                            <div
-                              key={res.id}
-                              className={`p-4 border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${bgClass}`}
-                            >
-                              <div>
-                                <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
-                                  {res.title}
-                                </h4>
-                                <p
-                                  className={`text-xs font-medium mt-1 ${textClass}`}
-                                >
-                                  {dist != null ? dist.toFixed(1) : "< 0.1"} km
-                                  away
-                                </p>
-                              </div>
-                              {res.contactInfo ? (
-                                <button
-                                  className="shrink-0 px-4 py-2 bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors focus:ring-2 focus:ring-green-500 focus:outline-none"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    alert(`Contact: ${res.contactInfo}`);
-                                  }}
-                                >
-                                  Contact: {res.contactInfo}
-                                </button>
-                              ) : (
-                                <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                  No contact info
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
+                  {nearestResources.length > 0 && (
+                    <div className="mt-6 pt-5 border-t border-gray-200 dark:border-slate-700">
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                        📍 Related Alerts Nearby
+                      </h4>
+                      <div className="space-y-2">
+                        {nearestResources.slice(0, 3).map((res, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-lg"
+                          >
+                            <p className="font-medium text-sm text-gray-900 dark:text-white">
+                              {res.title || `Alert ${idx + 1}`}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              {(res.distanceKm || res.distance || 0).toFixed(1)} km away
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <div className="bg-gray-50 dark:bg-slate-700/50 p-6 rounded-xl text-center border border-dashed border-gray-300 dark:border-slate-600">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 font-medium">
-                          No available resources found nearby.
-                        </p>
-                        <button
-                          onClick={() => {
-                            setSelectedItem(null);
-                            setSelectedItemType(null);
-                            setShowResourceModal(true);
-                          }}
-                          className="px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 hover:shadow transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                        >
-                          Request Help / Create Resource
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -1323,8 +1269,7 @@ const Dashboard = () => {
                       {selectedItem.title}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Created{" "}
-                      {new Date(selectedItem.createdAt).toLocaleString()}
+                      Created {new Date(selectedItem.createdAt).toLocaleString()}
                     </p>
                   </div>
 
@@ -1342,86 +1287,46 @@ const Dashboard = () => {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Status
                       </label>
-                      <span className="inline-block px-3 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                        {selectedItem.status}
+                      <span className="inline-block px-3 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-sm">
+                        {selectedItem.status || "Active"}
                       </span>
                     </div>
-                    {selectedItem.contactInfo && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Contact
-                        </label>
-                        <p className="text-gray-900 dark:text-gray-100">
-                          📞 {selectedItem.contactInfo}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedItem.latitude && selectedItem.longitude && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Location
+                        Type
                       </label>
-                      <p className="text-gray-900 dark:text-gray-100">
-                        📍 {selectedItem.latitude.toFixed(6)},{" "}
-                        {selectedItem.longitude.toFixed(6)}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setMapCenter([
-                            selectedItem.latitude,
-                            selectedItem.longitude,
-                          ]);
-                          setSelectedItem(null);
-                          setSelectedItemType(null);
-                        }}
-                        className="mt-2 flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-                      >
-                        <MapPin className="w-4 h-4" />
-                        <span>Show on Map</span>
-                      </button>
+                      <span className="inline-block px-3 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-sm">
+                        {selectedItem.resourceType || "Unknown"}
+                      </span>
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Location
+                    </label>
+                    <p className="text-gray-900 dark:text-gray-100">
+                      📍 {selectedItem.latitude.toFixed(6)}, {selectedItem.longitude.toFixed(6)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Contact
+                    </label>
+                    <p className="text-gray-900 dark:text-gray-100">
+                      {selectedItem.contactInfo || "No contact info"}
+                    </p>
+                  </div>
                 </>
               )}
-
-              <div className="pt-4 border-t border-gray-200 dark:border-slate-700 flex space-x-3">
-                <button
-                  onClick={() => {
-                    if (selectedItemType === "alert") {
-                      handleDeleteAlert(selectedItem.id);
-                    } else {
-                      handleDeleteResource(selectedItem.id);
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedItem(null);
-                    setSelectedItemType(null);
-                  }}
-                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
             </div>
           </motion.div>
         </div>
       )}
-
-      {/* AI Chatbot */}
-      <AIChatbot
-        onAlertCreated={fetchAlerts}
-        onResourceCreated={fetchResources}
-      />
     </div>
   );
-};
+}
 
 export default Dashboard;
+

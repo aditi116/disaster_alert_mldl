@@ -31,7 +31,7 @@ const CREDIBILITY_CONFIG = {
     ring: 'ring-emerald-500/40',
     dot: 'bg-emerald-500',
     tooltipBg: 'bg-emerald-900',
-    description: 'ML classifier marked this alert as credible based on its content, posting history, and time of report.',
+    description: 'This alert appears credible based on content analysis, posting history, and timing of the report.'
   },
   SUSPICIOUS: {
     // Confidence threshold: 0.30 – 0.70
@@ -43,7 +43,7 @@ const CREDIBILITY_CONFIG = {
     ring: 'ring-amber-500/40',
     dot: 'bg-amber-500',
     tooltipBg: 'bg-amber-900',
-    description: 'Classifier confidence is moderate. Verify before acting on this alert.',
+    description: 'This alert requires verification. Check the source and details before taking action.'
   },
   SPAM: {
     // Confidence threshold: > 0.50 (per spec)
@@ -55,7 +55,7 @@ const CREDIBILITY_CONFIG = {
     ring: 'ring-rose-500/40',
     dot: 'bg-rose-500',
     tooltipBg: 'bg-rose-900',
-    description: 'ML classifier flagged this as likely spam. Treat with high skepticism.',
+    description: 'This alert may be spam or misinformation. Verify with official sources before sharing.'
   },
 };
 
@@ -92,35 +92,38 @@ export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) =>
       onMouseLeave={() => setTooltipVisible(false)}
       onFocus={() => setTooltipVisible(true)}
       onBlur={() => setTooltipVisible(false)}
-      // keep tooltip accessible for keyboard users
       tabIndex={0}
       role="status"
       aria-label={`ML credibility: ${cfg.label} (${pct}% confidence)`}
     >
-      {/* Badge pill */}
+      {/* Badge pill - Enhanced with gradient and better visibility */}
       <span
         className={`
-          inline-flex items-center gap-1.5 px-2.5 py-1
-          rounded-full text-xs font-semibold
-          ring-1 ${cfg.ring}
+          inline-flex items-center gap-2 px-3 py-1.5
+          rounded-full text-xs font-bold
+          ring-2 ${cfg.ring}
           ${cfg.bg} ${cfg.text}
-          select-none cursor-default
+          select-none cursor-help
+          shadow-md hover:shadow-lg transition-all duration-200
+          backdrop-blur-sm
         `}
       >
         {/* Animated pulse dot */}
-        <span className="relative flex h-2 w-2 shrink-0">
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
           <span
-            className={`animate-ping absolute inline-flex h-full w-full rounded-full ${cfg.dot} opacity-60`}
+            className={`animate-ping absolute inline-flex h-full w-full rounded-full ${cfg.dot} opacity-75`}
           />
-          <span className={`relative inline-flex rounded-full h-2 w-2 ${cfg.dot}`} />
+          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${cfg.dot}`} />
         </span>
 
-        <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
-        <span>{cfg.label}</span>
-        <span className="opacity-70 font-normal">{pct}%</span>
+        <Icon className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+        <span className="font-semibold">{cfg.label}</span>
+        <span className="font-bold text-white bg-black bg-opacity-20 px-1.5 py-0.5 rounded-md">
+          {pct}%
+        </span>
       </span>
 
-      {/* Tooltip — appears above the badge */}
+      {/* Tooltip — appears above the badge with enhanced styling */}
       <AnimatePresence>
         {tooltipVisible && (
           <motion.div
@@ -128,12 +131,11 @@ export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) =>
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            // Position: below on small screens, above on larger
             className={`
-              absolute z-50 bottom-full mb-2 left-1/2 -translate-x-1/2
-              w-56 p-2.5 rounded-lg shadow-xl
+              absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2
+              w-64 p-3.5 rounded-xl shadow-2xl
               ${cfg.tooltipBg} text-white text-xs leading-relaxed
-              pointer-events-none
+              pointer-events-none backdrop-blur-sm
             `}
           >
             {/* Caret */}
@@ -146,12 +148,13 @@ export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) =>
               style={{ color: 'inherit', borderTopColor: 'inherit' }}
               aria-hidden="true"
             />
-            <p className="font-semibold mb-1">
+            <p className="font-bold mb-2 flex items-center gap-1.5">
+              <Icon className="w-4 h-4" />
               ML Credibility · {cfg.label}
             </p>
-            <p className="opacity-85">{cfg.description}</p>
-            <p className="mt-1 opacity-60">
-              Confidence: <strong className="opacity-100">{pct}%</strong>
+            <p className="opacity-90 mb-1.5">{cfg.description}</p>
+            <p className="mt-2 opacity-75 font-semibold">
+              Confidence: <span className="opacity-100">{pct}%</span>
             </p>
           </motion.div>
         )}
