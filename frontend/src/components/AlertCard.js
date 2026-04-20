@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ThumbsUp,
   ThumbsDown,
@@ -76,21 +76,35 @@ function resolveCredibility(label, confidence) {
 
 export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const badgeRef = useRef(null);
   const cfg = resolveCredibility(credibilityLabel, credibilityConfidence);
   if (!cfg) return null;
 
   const Icon = cfg.icon;
   const pct = Math.round((credibilityConfidence ?? 0) * 100);
 
+  const handleMouseEnter = () => {
+    if (badgeRef.current) {
+      const rect = badgeRef.current.getBoundingClientRect();
+      setTooltipPos({
+        top: rect.top - 8, // 8px offset for the caret
+        left: rect.left + rect.width / 2,
+      });
+    }
+    setTooltipVisible(true);
+  };
+
   return (
     <motion.div
+      ref={badgeRef}
       className="relative inline-flex items-center"
       initial={{ opacity: 0, scale: 0.75 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.1 }}
-      onMouseEnter={() => setTooltipVisible(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setTooltipVisible(false)}
-      onFocus={() => setTooltipVisible(true)}
+      onFocus={handleMouseEnter}
       onBlur={() => setTooltipVisible(false)}
       tabIndex={0}
       role="status"
@@ -123,7 +137,7 @@ export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) =>
         </span>
       </span>
 
-      {/* Tooltip — appears above the badge with enhanced styling */}
+      {/* Tooltip — uses fixed positioning to break out of modal overflow */}
       <AnimatePresence>
         {tooltipVisible && (
           <motion.div
@@ -132,16 +146,21 @@ export const CredibilityBadge = ({ credibilityLabel, credibilityConfidence }) =>
             exit={{ opacity: 0, y: 4, scale: 0.97 }}
             transition={{ duration: 0.15 }}
             className={`
-              absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2
+              fixed z-50
               w-64 p-3.5 rounded-xl shadow-2xl
               ${cfg.tooltipBg} text-white text-xs leading-relaxed
               pointer-events-none backdrop-blur-sm
             `}
+            style={{
+              top: `${tooltipPos.top}px`,
+              left: `${tooltipPos.left}px`,
+              transform: 'translate(-50%, -100%)',
+            }}
           >
             {/* Caret */}
             <span
               className={`
-                absolute top-full left-1/2 -translate-x-1/2
+                absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full
                 border-4 border-transparent
                 border-t-current
               `}
@@ -234,7 +253,7 @@ const AlertCard = ({ alert, onUpdate, onClick, onClickUser }) => {
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700 p-4 cursor-pointer overflow-hidden transition-all duration-300 ${
+      className={`relative bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-700 p-4 cursor-pointer transition-all duration-300 ${
         isHighPriority ? 'ring-2 ring-red-500 ring-opacity-50' : ''
       }`}
     >
